@@ -1,0 +1,282 @@
+version: '3.7'
+
+services:
+
+  elasticsearch:
+    image: elastic/elasticsearch:${ELASTIC_VERSION}
+    container_name: elasticsearch
+    environment:
+      - cluster.name=${ELASTIC_CLUSTER_NAME}
+      - node.name=${ELASTIC_CLUSTER_NODE_NAME}
+      - xpack.security.enabled=${ELASTIC_XPACK_SECURITY_ENABLED}
+      - xpack.security.authc.api_key.enabled=${ELASTIC_XPACK_SECURITY_AUTHC_API_KEYS_ENABLED}
+      - discovery.type=${ELASTIC_DISCOVERY_TYPE}
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+    ports:
+      - "${ELASTICSEARCH_EXPOSED_PORT}:9200"
+      - "9300:9300"
+    restart: unless-stopped
+    volumes:
+      - ${DOCKER_CONTAINER_VOLUME_ABS_PATH}/elasticsearch:/usr/share/elasticsearch/data
+    deploy:
+      resources:
+        limits:
+          memory: 500M
+        reservations:
+          memory: 500M
+
+  kibana:
+    container_name: kibana
+    image: elastic/kibana:${ELASTIC_VERSION}
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:${ELASTICSEARCH_EXPOSED_PORT}
+      - XPACK_MONITORING_ENABLED=${ELASTIC_XPACK_MONITORING_ENABLED}
+      - XPACK_MONITORING_COLLECTION_ENABLED=${ELASTIC_XPACK_MONITORING_COLLECTION_ENABLED}
+      - XPACK_SECURITY_ENABLED=${ELASTIC_XPACK_SECURITY_ENABLED}
+      - ELASTICSEARCH_USERNAME=${ELASTIC_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
+    restart: unless-stopped
+    ports:
+      - "${KIBANA_EXPOSED_PORT}:5601"
+    depends_on:
+      - elasticsearch
+    deploy:
+      resources:
+        limits:
+          memory: 225M
+        reservations:
+          memory: 225M
+
+  apm-server:
+    image: elastic/apm-server:${ELASTIC_VERSION}
+    container_name: apm-server
+    cap_add: [ "CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID" ]
+    cap_drop: [ "ALL" ]
+    restart: unless-stopped
+    ports:
+      - "${APM_SERVER_EXPOSED_PORT}:8200"
+    environment:
+      - ELASTICSEARCH_USERNAME=${ELASTIC_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
+    depends_on:
+      - elasticsearch
+      - kibana
+    command: >
+      apm-server -e
+        -E apm-server.rum.enabled=${ELASTIC_APM_SERER_RUM_ENABLED}
+        -E setup.kibana.host=kibana:${KIBANA_EXPOSED_PORT}
+        -E setup.template.settings.index.number_of_replicas=${ELASTIC_APM_SERER_SETUP_TEMPLATE_SETTINGS_INDEX_NUMBER_OF_REPLICAS}
+        -E apm-server.kibana.enabled=${ELASTIC_APM_SERER_KIBANA_ENABLED}
+        -E apm-server.kibana.host=kibana:${KIBANA_EXPOSED_PORT}
+        -E output.elasticsearch.hosts=["elasticsearch:${ELASTICSEARCH_EXPOSED_PORT}"]
+    healthcheck:
+      interval: 10s
+      retries: 12
+      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8200/
+    deploy:
+      resources:
+        limits:
+          memory: 35M
+        reservations:
+          memory: 35M
+
+  postgres:
+    image: postgres:${POSTGRES_VERSION}
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_EXPOSED_PORT}:5432"
+    restart: unless-stopped
+    volumes:
+      - ${DOCKER_CONTAINER_VOLUME_ABS_PATH}/postgres:/var/lib/postgresql/data
+      - ${DOCKER_CONTAINER_CONF_ABS_PATH}/postgres/docker_postgres_init.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql
+    deploy:
+      resources:
+        limits:
+          memory: 25M
+        reservations:
+          memory: 25M
+
+  redis:
+    image: redis:${REDIS_VERSION}
+    container_name: redis
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_EXPOSED_PORT}:6379"
+    restart: unless-stopped
+    volumes:
+      - ${DOCKER_CONTAINER_VOLUME_ABS_PATH}/redis:/data
+    deploy:
+      resources:
+        limits:
+          memory: 25M
+        reservations:
+          memory: 25M
+
+  redis-ui:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-ui
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:${REDIS_EXPOSED_PORT}
+    ports:
+      - "${REDIS_UI_EXPOSED_PORT}:8081"
+    deploy:
+      resources:
+        limits:
+          memory: 20M
+        reservations:
+          memory: 20M
+
+  minio:
+    image: minio/minio:${MINIO_VERSION}
+    container_name: minio
+    restart: unless-stopped
+    ports:
+      - "${MINIO_EXPOSED_PORT}:9000"
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+    command: server /data
+    volumes:
+      - ${DOCKER_CONTAINER_VOLUME_ABS_PATH}/minio:/data
+    deploy:
+      resources:
+        limits:
+          memory: 60M
+        reservations:
+          memory: 60M
+
+  consul:
+    image: consul:${CONSUL_VERSION}
+    container_name: consul
+    ports:
+      - "${CONSUL_EXPOSED_PORT}:8500"
+    restart: unless-stopped
+    volumes:
+      - ${DOCKER_CONTAINER_VOLUME_ABS_PATH}/consul:/data
+    deploy:
+      resources:
+        limits:
+          memory: 20M
+        reservations:
+          memory: 20M
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:${ZOOKEEPER_VERSION}
+    container_name: zookeeper
+    ports:
+      - "${ZOOKEEPER_EXPOSED_PORT}:2181"
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=${ZOOKEEPER_EXPOSED_PORT}
+      - ZOOKEEPER_SERVER_ID=1
+      - ZOOKEEPER_SERVERS=zookeeper:2888:3888
+    restart: unless-stopped
+    volumes:
+      - ${DOCKER_CONTAINER_VOLUME_ABS_PATH}/zookeeper:/var/lib/zookeeper
+    deploy:
+      resources:
+        limits:
+          memory: 55M
+        reservations:
+          memory: 55M
+
+  kafka:
+    image: confluentinc/cp-kafka:${KAFKA_VERSION}
+    container_name: kafka
+    ports:
+      - "${KAFKA_EXPOSED_PORT}:9092"
+      - "9999:9999"
+    environment:
+      - KAFKA_ADVERTISED_LISTENERS=LISTENER_DOCKER_INTERNAL://kafka:19092,LISTENER_DOCKER_EXTERNAL://${DOCKER_HOST_IP}:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=LISTENER_DOCKER_INTERNAL
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:${ZOOKEEPER_EXPOSED_PORT}
+      - KAFKA_BROKER_ID=1
+      - KAFKA_LOG4J_LOGGERS=kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - KAFKA_JMX_PORT=9999
+      - KAFKA_JMX_HOSTNAME=${DOCKER_HOST_IP}
+    restart: unless-stopped
+    volumes:
+      - ${DOCKER_CONTAINER_VOLUME_ABS_PATH}/kafka:/var/lib/kafka/data
+    depends_on:
+      - zookeeper
+    deploy:
+      resources:
+        limits:
+          memory: 325M
+        reservations:
+          memory: 325M
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:${KAFKA_UI_VERSION}
+    container_name: kafka-ui
+    ports:
+      - "${KAFKA_UI_EXPOSED_PORT}:8080"
+    restart: unless-stopped
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=${KAFKA_CLUSTERS_0_NAME}
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:19092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=localhost:${ZOOKEEPER_EXPOSED_PORT}
+    depends_on:
+      - kafka
+    deploy:
+      resources:
+        limits:
+          memory: 150M
+        reservations:
+          memory: 150M
+
+  spark:
+    image: bde2020/spark-master:${SPARK_VERSION}
+    container_name: spark
+    ports:
+      - "${SPARK_EXPOSED_PORT}:8080"
+      - "7077:7077"
+    restart: unless-stopped
+    environment:
+      - INIT_DAEMON_STEP=setup_spark
+    deploy:
+      resources:
+        limits:
+          memory: 175M
+        reservations:
+          memory: 175M
+
+# https://hub.docker.com/r/elastic/elastic-logging-plugin
+
+
+
+
+#   vault:
+#    build:
+#      context: vault
+#      dockerfile: Dockerfile
+#    container_name: vault
+#    ports:
+#      - 8201:8201
+#    volumes:
+#      - ./vault/config:/vault/config
+#      - ./vault/policies:/vault/policies
+#      - ./vault/data:/vault/data
+#      - ./vault/logs:/vault/logs
+#    environment:
+#      - VAULT_ADDR=http://127.0.0.1:8201
+#      - VAULT_API_ADDR=http://127.0.0.1:8201
+#      - VAULT_DEV_ROOT_TOKEN_ID=root
+#    command: server -dev -config=/vault/config/vault-config.json
+#    deploy:
+#      resources:
+#        limits:
+#          memory: 50m
+#        reservations:
+#          memory: 50m
+#    cap_add:
+#      - IPC_LOCK

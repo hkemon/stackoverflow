@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: admin
+  datasource:
+    url: jdbc:postgresql://${HOST_MACHINE}:${POSTGRES_EXPOSED_PORT}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+server:
+  port: 8180
