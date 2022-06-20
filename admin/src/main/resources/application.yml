@@ -1,9 +1,22 @@
 spring:
   application:
     name: admin
+  cloud:
+    consul:
+      discovery:
+        instanceId: ${spring.application.name}:${server.port}
+        healthCheckInterval: 20s
+        prefer-agent-address: false
+        ip-address: false
+        scheme: http
+        port: 80
+        health-check-url: http://${spring.application.name}:${server.port}/actuator/health
+#  spring:
+#    config:
+#      import: consul
   datasource:
     url: jdbc:postgresql://${HOST_MACHINE}:${POSTGRES_EXPOSED_PORT}/${POSTGRES_DB}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
 server:
-  port: 8180
+  port: 9666

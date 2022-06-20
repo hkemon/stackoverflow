@@ -1,5 +1,17 @@
 spring:
   application:
     name: users
+  cloud:
+    consul:
+      discovery:
+        instanceId: ${spring.application.name}:${server.port}
+        healthCheckInterval: 20s
+#  spring:
+#    config:
+#      import: consul
+  datasource:
+    url: jdbc:postgresql://${HOST_MACHINE}:${POSTGRES_EXPOSED_PORT}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
 server:
   port: 8184

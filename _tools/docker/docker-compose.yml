@@ -17,8 +17,8 @@ services:
     ports:
       - "${ELASTICSEARCH_EXPOSED_PORT}:9200"
       - "9300:9300"
-    volumes:
-      - ${DOCKER_CONTAINER_VOLUME_ABS_PATH}/elasticsearch:/usr/share/elasticsearch/data
+#    volumes:
+#      - ${DOCKER_CONTAINER_VOLUME_ABS_PATH}/elasticsearch:/usr/share/elasticsearch/data
     deploy:
       resources:
         limits:
@@ -168,8 +168,8 @@ services:
       - ZOOKEEPER_CLIENT_PORT=${ZOOKEEPER_EXPOSED_PORT}
       - ZOOKEEPER_SERVER_ID=1
       - ZOOKEEPER_SERVERS=zookeeper:2888:3888
-    volumes:
-      - ${DOCKER_CONTAINER_VOLUME_ABS_PATH}/zookeeper:/var/lib/zookeeper
+#    volumes:
+#      - ${DOCKER_CONTAINER_VOLUME_ABS_PATH}/zookeeper:/var/lib/zookeeper
     deploy:
       resources:
         limits:
@@ -195,8 +195,8 @@ services:
       - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
       - KAFKA_JMX_PORT=9999
       - KAFKA_JMX_HOSTNAME=${DOCKER_HOST_IP}
-    volumes:
-      - ${DOCKER_CONTAINER_VOLUME_ABS_PATH}/kafka:/var/lib/kafka/data
+#    volumes:
+#      - ${DOCKER_CONTAINER_VOLUME_ABS_PATH}/kafka:/var/lib/kafka/data
     depends_on:
       - zookeeper
     deploy:

@@ -1,0 +1,95 @@
+buildscript {
+    ext {
+        springBootVersion = "${org__springframework__boot}"
+    }
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${org__springframework__boot}")
+        classpath "io.spring.gradle:dependency-management-plugin:${io__spring__dependency_management}"
+    }
+}
+
+allprojects {
+    group = "${groups}"
+    version = "${versions}"
+}
+
+subprojects {
+    apply plugin: "org.springframework.boot"
+    apply plugin: "io.spring.dependency-management"
+    apply plugin: "java"
+
+    sourceCompatibility = 11
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    ext {
+        set("springCloudVersion", "${spring__cloud__version}")
+    }
+
+    bootJar {
+        enabled = false
+    }
+
+    jar {
+        enabled = true
+    }
+
+    configurations {
+        compileOnly {
+            extendsFrom annotationProcessor
+        }
+    }
+
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+        }
+    }
+
+    tasks.named("test") {
+        useJUnitPlatform()
+    }
+
+    dependencies {
+        implementation "org.springframework.boot:spring-boot-starter-web"
+        implementation "org.mapstruct:mapstruct:${org_mapstruct__mapstruct__version}"
+        runtimeOnly "org.postgresql:postgresql:${postgresql__version}"
+        compileOnly "org.projectlombok:lombok:${org_projectlombok__lombok__version}"
+        annotationProcessor "org.projectlombok:lombok:${org_projectlombok__lombok__version}"
+        testImplementation "org.springframework.boot:spring-boot-starter-test"
+
+        implementation "org.springframework.cloud:spring-cloud-starter-consul-all"
+        implementation "org.springframework.cloud:spring-cloud-starter-bootstrap"
+        implementation "org.springframework.boot:spring-boot-starter-actuator"
+    }
+}
+
+project(":admin") {
+    dependencies {
+        implementation project(":common")
+    }
+}
+
+project(":auth") {
+    dependencies {
+        implementation project(":common")
+    }
+}
+
+project(":qac") {
+    dependencies {
+        implementation project(":common")
+    }
+}
+
+project(":auth") {
+    dependencies {
+        implementation project(":common")
+    }
+}

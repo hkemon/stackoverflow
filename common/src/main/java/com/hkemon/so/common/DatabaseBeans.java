@@ -1,11 +1,13 @@
 package com.hkemon.so.common;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-public class CommonApplication {
+@Component
+public class DatabaseBeans {
     @Bean
-    public RestTemplate template() {
+    public RestTemplate template(){
         return new RestTemplate();
     }
 }
