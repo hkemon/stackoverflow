@@ -1,12 +1,9 @@
 buildscript {
-    ext {
-        springBootVersion = "${org__springframework__boot}"
-    }
     repositories {
         mavenCentral()
     }
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:${org__springframework__boot}")
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${org__springframework__boot}"
         classpath "io.spring.gradle:dependency-management-plugin:${io__spring__dependency_management}"
     }
 }
@@ -19,21 +16,21 @@ allprojects {
 subprojects {
     apply plugin: "org.springframework.boot"
     apply plugin: "io.spring.dependency-management"
+    apply plugin: "maven-publish"
     apply plugin: "java"
 
     sourceCompatibility = 11
 
     repositories {
-        mavenLocal()
         mavenCentral()
-    }
-
-    ext {
-        set("springCloudVersion", "${spring__cloud__version}")
+        mavenLocal()
+        maven { url "https://repo.spring.io/snapshot" }
+        maven { url "https://repo.spring.io/milestone" }
+        maven { url "https://repo.spring.io/release" }
     }
 
     bootJar {
-        enabled = false
+        enabled = true
     }
 
     jar {
@@ -48,7 +45,7 @@ subprojects {
 
     dependencyManagement {
         imports {
-            mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:${spring__cloud__version}"
         }
     }
 
@@ -58,15 +55,20 @@ subprojects {
 
     dependencies {
         implementation "org.springframework.boot:spring-boot-starter-web"
-        implementation "org.mapstruct:mapstruct:${org_mapstruct__mapstruct__version}"
-        runtimeOnly "org.postgresql:postgresql:${postgresql__version}"
-        compileOnly "org.projectlombok:lombok:${org_projectlombok__lombok__version}"
-        annotationProcessor "org.projectlombok:lombok:${org_projectlombok__lombok__version}"
-        testImplementation "org.springframework.boot:spring-boot-starter-test"
-
-        implementation "org.springframework.cloud:spring-cloud-starter-consul-all"
-        implementation "org.springframework.cloud:spring-cloud-starter-bootstrap"
         implementation "org.springframework.boot:spring-boot-starter-actuator"
+
+        implementation "org.springframework.cloud:spring-cloud-starter-consul-discovery"
+        implementation "org.springframework.cloud:spring-cloud-starter-bootstrap"
+
+        implementation "org.mapstruct:mapstruct:${org_mapstruct__mapstruct__version}"
+
+        runtimeOnly "org.postgresql:postgresql"
+
+        compileOnly "org.projectlombok:lombok:${org_projectlombok__lombok__version}"
+
+        annotationProcessor "org.projectlombok:lombok:${org_projectlombok__lombok__version}"
+
+        testImplementation "org.springframework.boot:spring-boot-starter-test"
     }
 }
 
@@ -88,7 +90,7 @@ project(":qac") {
     }
 }
 
-project(":auth") {
+project(":users") {
     dependencies {
         implementation project(":common")
     }
